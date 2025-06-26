@@ -24,6 +24,9 @@
 <button onclick="exportGeoJSON()">Export GeoJSON</button>
 <button onclick="exportCSV()">Export CSV/WKT</button>
 
+<button onclick="shareURL()">Copy Shareable URL</button>
+
+
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/wellknown@0.5.0/wellknown.js"></script>
@@ -119,6 +122,28 @@ function downloadFile(content, filename, type) {
   a.download = filename;
   a.click();
 }
+
+function shareURL() {
+  const input = document.getElementById('wktinput').value;
+  const encoded = encodeURIComponent(btoa(input));
+  const url = `${location.origin}${location.pathname}#data=${encoded}`;
+  navigator.clipboard.writeText(url);
+  alert("URL copied to clipboard!");
+}
+
+window.addEventListener("load", () => {
+  const hash = location.hash;
+  if (hash.startsWith("#data=")) {
+    try {
+      const decoded = atob(decodeURIComponent(hash.slice(6)));
+      document.getElementById('wktinput').value = decoded;
+      parseInput();
+    } catch (e) {
+      console.error("Error decoding shared data:", e);
+    }
+  }
+});
+
 </script>
 </body>
 </html>
