@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GeoSketch Paste</title>
+  <title>GeoSketch Mars</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link
     rel="stylesheet"
@@ -23,7 +23,6 @@
       height: 35px; 
     }
     
-    /* Simple modal for note input */
     .note-modal {
       display: none;
       position: fixed;
@@ -73,7 +72,7 @@
 </head>
 <body>
   
-  <h2>Paste QGIS WKT+Fields</h2>
+  <h2>GeoSketch Mars</h2>
   <textarea id="wktinput" placeholder="Paste QGIS WKT with fields..."></textarea><br/>
   
   <div style="margin: 0.5em 0;">
@@ -90,7 +89,6 @@
   <button onclick="exportCSV()">Export CSV/WKT</button>
   <button onclick="shareURL()">Copy Shareable URL</button>
   
-  <!-- Modal for adding notes -->
   <div class="modal-overlay" id="modalOverlay"></div>
   <div class="note-modal" id="noteModal">
     <h3>Add Note</h3>
@@ -110,13 +108,11 @@
   <script>
     let map = L.map('map').setView([0, 0], 2);
     
-    // default imagery
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      {
-        attribution: 'Tiles © Esri'
-      }
-    ).addTo(map);
+    // Mars basemap
+    L.tileLayer('https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png', {
+      attribution: "NASA/MGS/MOLA/IAU/USGS/OpenPlanetary",
+      tms: false
+    }).addTo(map);
     
     let layerGroup = L.featureGroup().addTo(map);
     let features = [];
@@ -154,19 +150,11 @@
       const note = document.getElementById('noteInput').value || 'No note';
       
       if (currentDrawnLayer) {
-        // Add to map
         layerGroup.addLayer(currentDrawnLayer);
-        
-        // Create feature object
         const geoJsonFeature = currentDrawnLayer.toGeoJSON();
         geoJsonFeature.properties = { note: note };
-        
-        // Add popup
         currentDrawnLayer.bindPopup(`<b>Note:</b> ${note}`);
-        
-        // Add to features array
         features.push(geoJsonFeature);
-        
         currentDrawnLayer = null;
       }
       
@@ -187,11 +175,9 @@
       document.getElementById('noteModal').style.display = 'none';
     }
     
-    // Handle editing
     map.on(L.Draw.Event.EDITED, function (e) {
       var layers = e.layers;
       layers.eachLayer(function (layer) {
-        // Update the corresponding feature in the features array
         const geoJson = layer.toGeoJSON();
         const index = features.findIndex(f => 
           JSON.stringify(f.geometry) === JSON.stringify(geoJson.geometry)
@@ -203,7 +189,6 @@
       updateURL();
     });
     
-    // Handle deletion
     map.on(L.Draw.Event.DELETED, function (e) {
       var layers = e.layers;
       layers.eachLayer(function (layer) {
@@ -250,6 +235,82 @@
       }
     }
     
+    function filterGeometry() {
+      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
+      updateTextareaDisplay(selectedFilter);
+    }
+    
+    function updateTextareaDisplay(filter = 'all') {
+      if (features.length === 0) return;
+      
+      let filteredFeatures = features;
+      if (filter !== 'all') {
+        const geomMap = {
+          'points': 'Point',
+          'lines': 'LineString', 
+          'polygons': 'Polygon'
+        };
+        filteredFeatures = features.filter(f => f.geometry.type === geomMap[filter]);
+      }
+      
+      if (filteredFeatures.length === 0) {
+        document.getElementById('wktinput').value = `No ${filter} found`;
+        return;
+      }
+      
+      const keys = new Set();
+      filteredFeatures.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
+      const fields = Array.from(keys);
+      const lines = [ [...fields, 'wkt_geom'].join('\t') ];
+      
+      filteredFeatures.forEach(f => {
+        const values = fields.map(k => f.properties[k] || "");
+        const wkt = toWKT(f.geometry);
+        lines.push([...values, wkt].join('\t'));
+      });
+      
+      document.getElementById('wktinput').value = lines.join('\n');
+    }
+    
+    function updateURL() {
+      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
+      updateTextareaDisplay(selectedFilter);
+    }
+    
+    function copyWKT() {
+      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
+      let exportFeatures = features;
+      
+      if (selectedFilter !== 'all') {
+        const geomMap = {
+          'points': 'Point',
+          'lines': 'LineString', 
+          'polygons': 'Polygon'
+        };
+        exportFeatures = features.filter(f => f.geometry.type === geomMap[selectedFilter]);
+      }
+      
+      if (!exportFeatures.length) {
+        alert(`No ${selectedFilter} to copy`);
+        return;
+      }
+      
+      const keys = new Set();
+      exportFeatures.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
+      const fields = Array.from(keys);
+      const lines = [ [...fields, 'wkt_geom'].join('\t') ];
+      
+      exportFeatures.forEach(f => {
+        const values = fields.map(k => f.properties[k] || "");
+        const wkt = toWKT(f.geometry);
+        lines.push([...values, wkt].join('\t'));
+      });
+      
+      const wktData = lines.join('\n');
+      navigator.clipboard.writeText(wktData);
+      alert(`${selectedFilter} WKT copied to clipboard!`);
+    }
+    
     function exportGeoJSON() {
       const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
       let exportFeatures = features;
@@ -267,7 +328,7 @@
         type: "FeatureCollection",
         features: exportFeatures
       };
-      downloadFile(JSON.stringify(data, null, 2), "sketch.geojson", "application/json");
+      downloadFile(JSON.stringify(data, null, 2), "sketch-mars.geojson", "application/json");
     }
     
     function exportCSV() {
@@ -294,7 +355,7 @@
         const wkt = toWKT(f.geometry);
         lines.push([...values, wkt].join('\t'));
       });
-      downloadFile(lines.join('\n'), "sketch.csv", "text/tab-separated-values");
+      downloadFile(lines.join('\n'), "sketch-mars.csv", "text/tab-separated-values");
     }
     
     function toWKT(geom) {
@@ -307,66 +368,12 @@
       }
     }
     
-    function copyWKT() {
-      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
-      let exportFeatures = features;
-      
-      if (selectedFilter !== 'all') {
-        const geomMap = {
-          'points': 'Point',
-          'lines': 'LineString', 
-          'polygons': 'Polygon'
-        };
-        exportFeatures = features.filter(f => f.geometry.type === geomMap[selectedFilter]);
-      }
-      
-      if (!exportFeatures.length) {
-        alert(`No ${selectedFilter} to copy`);
-        return;
-      }
-      
-      // Generate tabular WKT format
-      const keys = new Set();
-      exportFeatures.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
-      const fields = Array.from(keys);
-      const lines = [ [...fields, 'wkt_geom'].join('\t') ];
-      
-      exportFeatures.forEach(f => {
-        const values = fields.map(k => f.properties[k] || "");
-        const wkt = toWKT(f.geometry);
-        lines.push([...values, wkt].join('\t'));
-      });
-      
-      const wktData = lines.join('\n');
-      navigator.clipboard.writeText(wktData);
-      alert(`${selectedFilter} WKT copied to clipboard!`);
-    }
-    
     function downloadFile(content, filename, type) {
       const blob = new Blob([content], { type });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = filename;
       a.click();
-    }
-    
-    function updateURL() {
-      // Convert features back to tabular format for URL sharing
-      if (features.length === 0) return;
-      
-      const keys = new Set();
-      features.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
-      const fields = Array.from(keys);
-      const lines = [ [...fields, 'wkt_geom'].join('\t') ];
-      
-      features.forEach(f => {
-        const values = fields.map(k => f.properties[k] || "");
-        const wkt = toWKT(f.geometry);
-        lines.push([...values, wkt].join('\t'));
-      });
-      
-      const tabularData = lines.join('\n');
-      document.getElementById('wktinput').value = tabularData;
     }
     
     function shareURL() {
@@ -378,14 +385,12 @@
       alert("URL copied to clipboard!");
     }
     
-    // Enter key in note input
     document.getElementById('noteInput').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         saveNote();
       }
     });
     
-    // ESC key to cancel
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         cancelNote();
