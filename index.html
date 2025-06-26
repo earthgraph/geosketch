@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GeoSketch Paste</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    #map { height: 60vh; }
+    textarea { width: 100%; height: 150px; }
+    button { margin: 0.5em; }
+  </style>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+</head>
+<body>
+
+<h2>Paste QGIS WKT+Fields</h2>
+<textarea id="wktinput" placeholder="Paste QGIS WKT with fields..."></textarea><br/>
+<button onclick="parseInput()">Render</button>
+<button onclick="exportGeoJSON()">Export GeoJSON</button>
+<button onclick="exportCSV()">Export CSV/WKT</button>
+
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/wellknown@0.5.0/wellknown.js"></script>
+
+<script>
+let map = L.map('map').setView([0, 0], 2);
+// default osm
+// L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+// default imagery
+L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: 'Tiles © Esri'
+  }
+).addTo(map);
+
+
+let layerGroup = L.featureGroup().addTo(map);
+let features = [];
+
+function parseInput() {
+  const text = document.getElementById('wktinput').value.trim();
+  const lines = text.split('\n');
+  const headers = lines[0].split('\t');
+  const geomCol = headers.findIndex(h => h.toLowerCase().includes("wkt") || h.toLowerCase().includes("geom"));
+  if (geomCol === -1) return alert("No geometry column found.");
+
+  features = [];
+  layerGroup.clearLayers();
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split('\t');
+    const wkt = cells[geomCol];
+    const geom = wellknown.parse(wkt);
+    if (!geom) continue;
+
+    const props = {};
+    headers.forEach((h, j) => { if (j !== geomCol) props[h] = cells[j]; });
+
+    const layer = L.geoJSON({ type: "Feature", geometry: geom, properties: props })
+      .bindPopup(Object.entries(props).map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br/>'))
+      .addTo(layerGroup);
+
+    features.push({
+      type: "Feature",
+      geometry: geom,
+      properties: props
+    });
+  }
+
+  if (features.length > 0) {
+    map.fitBounds(layerGroup.getBounds(), { padding: [20, 20] });
+  }
+}
+
+function exportGeoJSON() {
+  const data = {
+    type: "FeatureCollection",
+    features: features
+  };
+  downloadFile(JSON.stringify(data, null, 2), "sketch.geojson", "application/json");
+}
+
+function exportCSV() {
+  if (!features.length) return;
+  const keys = new Set();
+  features.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
+  const fields = Array.from(keys);
+  const lines = [ [...fields, 'WKT'].join('\t') ];
+  features.forEach(f => {
+    const values = fields.map(k => f.properties[k] || "");
+    const wkt = toWKT(f.geometry);
+    lines.push([...values, wkt].join('\t'));
+  });
+  downloadFile(lines.join('\n'), "sketch.csv", "text/tab-separated-values");
+}
+
+function toWKT(geom) {
+  switch (geom.type) {
+    case 'Point': return `POINT(${geom.coordinates.join(' ')})`;
+    case 'LineString': return `LINESTRING(${geom.coordinates.map(c => c.join(' ')).join(', ')})`;
+    case 'Polygon':
+      return `POLYGON((${geom.coordinates[0].map(c => c.join(' ')).join(', ')}))`;
+    default: return 'GEOMETRY';
+  }
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+</script>
+</body>
+</html>
+
