@@ -14,6 +14,12 @@ You are working on some sort of mapping and need to quickly iterate with colleag
 
 **Caveat:** multiple toppologies can be shared via URL but QGIS won't like them, thus, before pasting back onto a new geopackage for quick inspection, please be mindful of filtering only the topology of choice.
 
+## Planetary use case (rough)
+This is still very rough. But, if one sets the QGIS CRS to planetary geographic e.g. see on https://voparis-vespa-crs.obspm.fr/web/mars.html **AND** sets the projections of the temporary scratch layer to the same, it can work in a similar fashion:
+* https://geosketch.io/mars/
+* https://geosketch.io/moon/
+If your QGIS project is messy and with "unknown CRS" and go-figure metric coordinates, no.
+
 ## Privacy & Data Handling
 
 **Your data stays in your browser** - this tool is 100% client-side with no server storage.
