@@ -2,79 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GeoSketch Paste</title>
+  <title>GeoSketch Earth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
-  />
-  <style>
-    body { font-family: sans-serif; margin: 0; }
-    #map { height: 60vh; }
-    textarea { width: 100%; height: 150px; }
-    button { margin: 0.5em; }
-    
-    .leaflet-draw-toolbar a { 
-      width: 35px; 
-      height: 35px; 
-    }
-    
-    /* Simple modal for note input */
-    .note-modal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border-radius: 5px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      z-index: 10000;
-      max-width: 300px;
-      width: 90%;
-    }
-    
-    .note-modal input {
-      width: 100%;
-      padding: 8px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-    }
-    
-    .note-modal button {
-      margin: 5px;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-    }
-    
-    .note-modal .ok { background: #4CAF50; color: white; }
-    .note-modal .cancel { background: #f44336; color: white; }
-    
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 9999;
-    }
-  </style>
-  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="geosketch.css" />
 </head>
 <body>
   
-  <h2>Paste QGIS WKT+Fields</h2>
+  <h2>GeoSketch Earth</h2>
   <textarea id="wktinput" placeholder="Paste QGIS WKT with fields..."></textarea><br/>
+  
+  <div style="margin: 0.5em 0;">
+    <strong>Basemap:</strong>
+    <label><input type="radio" name="basemapChoice" value="satellite" checked onchange="switchBasemap()"> Imagery</label>
+    <label><input type="radio" name="basemapChoice" value="terrain" onchange="switchBasemap()"> Terrain</label>
+  </div>
   
   <div style="margin: 0.5em 0;">
     <strong>Filter:</strong>
@@ -90,7 +33,6 @@
   <button onclick="exportCSV()">Export CSV/WKT</button>
   <button onclick="shareURL()">Copy Shareable URL</button>
   
-  <!-- Modal for adding notes -->
   <div class="modal-overlay" id="modalOverlay"></div>
   <div class="note-modal" id="noteModal">
     <h3>Add Note</h3>
@@ -106,305 +48,33 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/wellknown@0.5.0/wellknown.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="geosketch.js"></script>
   
   <script>
-    let map = L.map('map').setView([0, 0], 2);
-    
-    // default imagery
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      {
+    // Initialize GeoSketch for Earth
+    document.addEventListener('DOMContentLoaded', function() {
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
-      }
-    ).addTo(map);
-    
-    let layerGroup = L.featureGroup().addTo(map);
-    let features = [];
-    let currentDrawnLayer = null;
-    
-    // Drawing controls
-    var drawControl = new L.Control.Draw({
-      draw: {
-        polyline: true,
-        polygon: true,
-        marker: true,
-        circle: false,
-        rectangle: false,
-        circlemarker: false
-      },
-      edit: {
-        featureGroup: layerGroup
-      }
-    });
-    map.addControl(drawControl);
-    
-    // Handle drawing events
-    map.on(L.Draw.Event.CREATED, function (e) {
-      currentDrawnLayer = e.layer;
-      showNoteModal();
-    });
-    
-    function showNoteModal() {
-      document.getElementById('modalOverlay').style.display = 'block';
-      document.getElementById('noteModal').style.display = 'block';
-      document.getElementById('noteInput').focus();
-    }
-    
-    function saveNote() {
-      const note = document.getElementById('noteInput').value || 'No note';
+      });
       
-      if (currentDrawnLayer) {
-        // Add to map
-        layerGroup.addLayer(currentDrawnLayer);
-        
-        // Create feature object
-        const geoJsonFeature = currentDrawnLayer.toGeoJSON();
-        geoJsonFeature.properties = { note: note };
-        
-        // Add popup
-        currentDrawnLayer.bindPopup(`<b>Note:</b> ${note}`);
-        
-        // Add to features array
-        features.push(geoJsonFeature);
-        
-        currentDrawnLayer = null;
-      }
+      const terrainLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri'
+      });
       
-      hideNoteModal();
-      document.getElementById('noteInput').value = '';
-
-      updateURL();
-    }
-    
-    function cancelNote() {
-      currentDrawnLayer = null;
-      hideNoteModal();
-      document.getElementById('noteInput').value = '';
-    }
-    
-    function hideNoteModal() {
-      document.getElementById('modalOverlay').style.display = 'none';
-      document.getElementById('noteModal').style.display = 'none';
-    }
-    
-    // Handle editing
-    map.on(L.Draw.Event.EDITED, function (e) {
-      var layers = e.layers;
-      layers.eachLayer(function (layer) {
-        // Update the corresponding feature in the features array
-        const geoJson = layer.toGeoJSON();
-        const index = features.findIndex(f => 
-          JSON.stringify(f.geometry) === JSON.stringify(geoJson.geometry)
-        );
-        if (index !== -1) {
-          features[index].geometry = geoJson.geometry;
+      geoSketch = new GeoSketch({
+        name: 'Earth',
+        basemaps: {
+          'satellite': satelliteLayer,
+          'terrain': terrainLayer
         }
       });
-      updateURL();
     });
-    
-    // Handle deletion
-    map.on(L.Draw.Event.DELETED, function (e) {
-      var layers = e.layers;
-      layers.eachLayer(function (layer) {
-        const geoJson = layer.toGeoJSON();
-        features = features.filter(f => 
-          JSON.stringify(f.geometry) !== JSON.stringify(geoJson.geometry)
-        );
-      });
-      updateURL();
-    });
-    
-    function parseInput() {
-      const text = document.getElementById('wktinput').value.trim();
-      const lines = text.split('\n');
-      const headers = lines[0].split('\t');
-      const geomCol = headers.findIndex(h => h.toLowerCase().includes("wkt") || h.toLowerCase().includes("geom"));
-      if (geomCol === -1) return alert("No geometry column found.");
-      
-      features = [];
-      layerGroup.clearLayers();
-      
-      for (let i = 1; i < lines.length; i++) {
-        const cells = lines[i].split('\t');
-        const wkt = cells[geomCol];
-        const geom = wellknown.parse(wkt);
-        if (!geom) continue;
-        
-        const props = {};
-        headers.forEach((h, j) => { if (j !== geomCol) props[h] = cells[j]; });
-        
-        const layer = L.geoJSON({ type: "Feature", geometry: geom, properties: props })
-          .bindPopup(Object.entries(props).map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br/>'))
-          .addTo(layerGroup);
-        
-        features.push({
-          type: "Feature",
-          geometry: geom,
-          properties: props
-        });
-      }
-      
-      if (features.length > 0) {
-        map.fitBounds(layerGroup.getBounds(), { padding: [20, 20] });
-      }
-    }
-    
-    function exportGeoJSON() {
-      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
-      let exportFeatures = features;
-      
-      if (selectedFilter !== 'all') {
-        const geomMap = {
-          'points': 'Point',
-          'lines': 'LineString', 
-          'polygons': 'Polygon'
-        };
-        exportFeatures = features.filter(f => f.geometry.type === geomMap[selectedFilter]);
-      }
-      
-      const data = {
-        type: "FeatureCollection",
-        features: exportFeatures
-      };
-      downloadFile(JSON.stringify(data, null, 2), "sketch.geojson", "application/json");
-    }
-    
-    function exportCSV() {
-      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
-      let exportFeatures = features;
-      
-      if (selectedFilter !== 'all') {
-        const geomMap = {
-          'points': 'Point',
-          'lines': 'LineString', 
-          'polygons': 'Polygon'
-        };
-        exportFeatures = features.filter(f => f.geometry.type === geomMap[selectedFilter]);
-      }
-      
-      if (!exportFeatures.length) return alert(`No ${selectedFilter} to export`);
-      
-      const keys = new Set();
-      exportFeatures.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
-      const fields = Array.from(keys);
-      const lines = [ [...fields, 'WKT'].join('\t') ];
-      exportFeatures.forEach(f => {
-        const values = fields.map(k => f.properties[k] || "");
-        const wkt = toWKT(f.geometry);
-        lines.push([...values, wkt].join('\t'));
-      });
-      downloadFile(lines.join('\n'), "sketch.csv", "text/tab-separated-values");
-    }
-    
-    function toWKT(geom) {
-      switch (geom.type) {
-        case 'Point': return `POINT(${geom.coordinates.join(' ')})`;
-        case 'LineString': return `LINESTRING(${geom.coordinates.map(c => c.join(' ')).join(', ')})`;
-        case 'Polygon':
-          return `POLYGON((${geom.coordinates[0].map(c => c.join(' ')).join(', ')}))`;
-        default: return 'GEOMETRY';
-      }
-    }
-    
-    function copyWKT() {
-      const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
-      let exportFeatures = features;
-      
-      if (selectedFilter !== 'all') {
-        const geomMap = {
-          'points': 'Point',
-          'lines': 'LineString', 
-          'polygons': 'Polygon'
-        };
-        exportFeatures = features.filter(f => f.geometry.type === geomMap[selectedFilter]);
-      }
-      
-      if (!exportFeatures.length) {
-        alert(`No ${selectedFilter} to copy`);
-        return;
-      }
-      
-      // Generate tabular WKT format
-      const keys = new Set();
-      exportFeatures.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
-      const fields = Array.from(keys);
-      const lines = [ [...fields, 'wkt_geom'].join('\t') ];
-      
-      exportFeatures.forEach(f => {
-        const values = fields.map(k => f.properties[k] || "");
-        const wkt = toWKT(f.geometry);
-        lines.push([...values, wkt].join('\t'));
-      });
-      
-      const wktData = lines.join('\n');
-      navigator.clipboard.writeText(wktData);
-      alert(`${selectedFilter} WKT copied to clipboard!`);
-    }
-    
-    function downloadFile(content, filename, type) {
-      const blob = new Blob([content], { type });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-    }
-    
-    function updateURL() {
-      // Convert features back to tabular format for URL sharing
-      if (features.length === 0) return;
-      
-      const keys = new Set();
-      features.forEach(f => Object.keys(f.properties).forEach(k => keys.add(k)));
-      const fields = Array.from(keys);
-      const lines = [ [...fields, 'wkt_geom'].join('\t') ];
-      
-      features.forEach(f => {
-        const values = fields.map(k => f.properties[k] || "");
-        const wkt = toWKT(f.geometry);
-        lines.push([...values, wkt].join('\t'));
-      });
-      
-      const tabularData = lines.join('\n');
-      document.getElementById('wktinput').value = tabularData;
-    }
-    
-    function shareURL() {
-      updateURL();
-      const input = document.getElementById('wktinput').value;
-      const encoded = encodeURIComponent(btoa(input));
-      const url = `${location.origin}${location.pathname}#data=${encoded}`;
-      navigator.clipboard.writeText(url);
-      alert("URL copied to clipboard!");
-    }
-    
-    // Enter key in note input
-    document.getElementById('noteInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        saveNote();
-      }
-    });
-    
-    // ESC key to cancel
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        cancelNote();
-      }
-    });
-    
-    window.addEventListener("load", () => {
-      const hash = location.hash;
-      if (hash.startsWith("#data=")) {
-        try {
-          const decoded = atob(decodeURIComponent(hash.slice(6)));
-          document.getElementById('wktinput').value = decoded;
-          parseInput();
-        } catch (e) {
-          console.error("Error decoding shared data:", e);
-        }
-      }
-    });
-    
   </script>
+  
+<footer style="text-align: center; padding: 10px; font-size: 12px; color: #666; border-top: 1px solid #ddd; margin-top: 10px;">
+  <a href="https://github.com/earthgraph/geosketch" style="color: #666; text-decoration: none;">GeoSketch</a> • 
+  <a href="https://earthgraph.eu" style="color: #666; text-decoration: none;">Earthgraph</a>
+</footer>
+
 </body>
 </html>
