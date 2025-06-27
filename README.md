@@ -46,7 +46,7 @@ If your QGIS project is messy and with "unknown CRS" and go-figure metric coordi
 
 ## Test WKT
 
-Pasting this on Geosketch (of course not meaningful on Mars. the Moon), and pressing "render" will show tet vectors.
+Pasting this on Geosketch (of course not meaningful on Mars, or on the Moon), and pressing "render" will show test vectors.
 
 ```
 note	wkt_geom
