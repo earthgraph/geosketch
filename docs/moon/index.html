@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Geosketch Moon</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../js/leaflet/leaflet-1.9.4.css" />
+  <link rel="stylesheet" href="../js/leaflet.draw/leaflet.draw-1.0.4.css" />
+  <link rel="stylesheet" href="../css/geosketch.css" />
+  
+  <link rel="icon" type="image/svg+xml" href="../img/logo.svg">
+  <link rel="icon" type="image/png" href="../img/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../img/android-chrome-192x192.png">
+  
+</head>
+<body>
+  
+  <h2>
+    <a href="/moon" style="text-decoration: none;">
+      <img src="../img/logo.svg" alt="Geosketch" style="height: 1.2em; vertical-align: middle; margin-right: 8px;">
+    </a>
+    Geosketch Moon
+  </h2>
+  <textarea id="wktinput" placeholder="Paste QGIS WKT with fields..."></textarea><br/>
+  
+  <div style="margin: 0.5em 0;">
+    <strong>Basemap:</strong>
+    <label><input type="radio" name="basemapChoice" value="opm_moon" checked onchange="switchBasemap()"> OPM Global</label>
+    <label><input type="radio" name="basemapChoice" value="luna_wac_global" onchange="switchBasemap()"> LROC WAC</label>
+  </div>
+  
+  <div style="margin: 0.5em 0;">
+    <strong>Filter:</strong>
+    <label><input type="radio" name="geomFilter" value="all" checked onchange="filterGeometry()"> All</label>
+    <label><input type="radio" name="geomFilter" value="points" onchange="filterGeometry()"> Points</label>
+    <label><input type="radio" name="geomFilter" value="lines" onchange="filterGeometry()"> Lines</label>
+    <label><input type="radio" name="geomFilter" value="polygons" onchange="filterGeometry()"> Polygons</label>
+  </div>
+  
+  <button onclick="parseInput()">Render</button>
+  <a href="/moon/" class="button-link">Clear</a>
+  <button onclick="copyWKT()">Copy WKT</button>
+                  <button class="export-btn" onclick="exportGeoJSON()">Export GeoJSON</button>
+                <button class="export-btn" onclick="exportCSV()">Export CSV/WKT</button>
+  <button onclick="shareURL()">Copy Shareable URL</button>
+  <button onclick="shareEncrypted()">🔒 Share Encrypted</button>
+  
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="note-modal" id="noteModal">
+    <h3>Add Note</h3>
+    <input type="text" id="noteInput" placeholder="Enter note...">
+    <div>
+      <button class="ok" onclick="saveNote()">OK</button>
+      <button class="cancel" onclick="cancelNote()">Cancel</button>
+    </div>
+  </div>
+  
+  <div class="password-modal" id="passwordModal">
+    <h3 id="passwordModalTitle">Enter Password</h3>
+    <input type="password" id="passwordInput" placeholder="Enter password...">
+    <div>
+      <button class="ok" onclick="handlePasswordSubmit()">OK</button>
+      <button class="cancel" onclick="cancelPassword()">Cancel</button>
+    </div>
+  </div>
+  
+  <div class="edit-note-modal" id="editNoteModal">
+    <h3>Edit Note</h3>
+    <textarea id="editNoteTextarea" placeholder="Enter your note here..."></textarea>
+    <div>
+      <button class="ok" onclick="saveEditedNote()">Save</button>
+      <button class="cancel" onclick="cancelEditNote()">Cancel</button>
+    </div>
+  </div>
+  
+  <div id="map">
+    <!-- Search Interface -->
+    <div class="search-container">
+      <input type="text" id="toponymSearch" class="search-box" placeholder="Search lunar features..." autocomplete="off" />
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+  
+  <script src="../js/leaflet/leaflet-1.9.4.js"></script>
+  <script src="../js/wellknown/wellknown-0.5.0.js"></script>
+  <script src="../js/leaflet.draw/leaflet.draw-1.0.4.js"></script>
+  <script src="../js/pako/pako-2.1.0.min.js"></script>
+
+  <script src="../js/geosketch.js"></script>
+  
+  <script>
+    // Initialize GeoSketch for Moon
+    document.addEventListener('DOMContentLoaded', function() {
+      const opmLayer = L.tileLayer('https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-moon-basemap-v0-1/all/{z}/{x}/{y}.png', {
+        attribution: 'NASA/LRO/LOLA/IAU/USGS/OpenPlanetary'
+      });
+      
+      const wacLayer = L.tileLayer.wms('http://webmap.lroc.asu.edu/cgi-bin/mapserv', {
+        layers: 'luna_wac_global',
+        format: 'image/png',
+        transparent: false,
+        attribution: "NASA/LRO/LROC/ASU"
+      });
+      
+              geoSketch = new GeoSketch({
+          name: 'Moon',
+          basemaps: {
+            'opm_moon': opmLayer,
+            'luna_wac_global': wacLayer
+          }
+        });
+    });
+  </script>
+  
+  <footer style="text-align: center; padding: 10px; font-size: 12px; color: #666; border-top: 1px solid #ddd; margin-top: 10px;">
+    <div style="margin-bottom: 5px; font-size: 11px;">
+      <a href="../" style="color: #999;">Earth</a> • 
+      <a href="/mars" style="color: #999;">Mars</a> • 
+      <a href="/" style="color: #999;">Moon</a>
+    </div>
+    <a href="https://github.com/earthgraph/geosketch" style="color: #666; text-decoration: none;">Geosketch v1.2.1</a> • 
+    <a href="https://earthgraph.eu" style="color: #666; text-decoration: none;">Earthgraph</a>
+  </footer>
+  
+</body>
+</html>

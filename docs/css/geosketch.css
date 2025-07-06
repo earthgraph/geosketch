@@ -1,0 +1,458 @@
+body { font-family: sans-serif; margin: 0; }
+/* #map { height: 60vh; } */
+#map { height: calc(60vh - 30px); }
+textarea { width: 100%; height: 150px; }
+button, .button-link {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  color: #495057;
+  padding: 8px 16px;
+  margin: 0.5em;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: inline-block;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+button:hover, .button-link:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  color: #495057;
+}
+
+button:active, .button-link:active {
+  background: #dee2e6;
+  border-color: #6c757d;
+  transform: translateY(1px);
+}
+
+.leaflet-draw-toolbar a { 
+  width: 35px; 
+  height: 35px; 
+}
+
+/* Search Interface Styles */
+.search-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  width: 250px;
+}
+
+.search-box {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.search-box:focus {
+  border-color: #007cba;
+  box-shadow: 0 2px 12px rgba(0,124,186,0.25);
+  background: white;
+}
+
+.search-box::placeholder {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 5px;
+  display: none;
+  border: 1px solid #dee2e6;
+  z-index: 1001;
+}
+
+.search-results.show {
+  display: block;
+}
+
+.result-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f8f9fa;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.result-item:hover,
+.result-item.highlighted {
+  background-color: #f8f9fa;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.result-details {
+  font-size: 11px;
+  color: #6c757d;
+  line-height: 1.2;
+}
+
+.result-coords {
+  font-family: monospace;
+  color: #007cba;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.no-results, .loading {
+  padding: 15px 12px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* Search marker styling */
+.search-marker {
+  background: none;
+  border: none;
+  font-size: 16px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Popup styling for search results */
+.popup-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.popup-details {
+  color: #666;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ADD THIS MOBILE SECTION */
+@media (max-width: 768px) {
+  #map { 
+    height: calc(60vh - 30px);
+    touch-action: pan-x pan-y;
+  }
+  
+  textarea { 
+    height: 100px;
+    font-size: 16px;
+  }
+  
+  button, .button-link { 
+    padding: 12px 16px;
+    margin: 0.3em;
+  }
+  
+  body {
+    -webkit-overflow-scrolling: touch;
+    margin-left: 5px; /* Prevent interaction with system edge gestures */
+    margin-right: 5px; /* Protect both sides from edge gestures */
+  }
+  
+  .leaflet-container {
+    touch-action: pan-x pan-y;
+  }
+  
+  .leaflet-draw-toolbar a { 
+    width: 44px; 
+    height: 44px; 
+  }
+  
+  /* Mobile search adjustments */
+  .search-container {
+    width: 200px; /* Compact width to fit right side */
+    right: 10px;
+    top: 10px; /* Back to top - right positioning fixes the overlap */
+  }
+  
+  .search-box {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 10px 14px;
+  }
+  
+  .search-results {
+    max-height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-container {
+    top: 10px; /* Back to top position */
+    width: 180px; /* Keep compact on small screens */
+    right: 10px; /* Stay on the right side */
+  }
+}
+
+h2 {
+  margin-left: 15px;
+}
+
+.note-modal, .password-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  z-index: 10000;
+  max-width: 300px;
+  width: 90%;
+}
+
+.note-modal input, .password-modal input {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.note-modal button, .password-modal button {
+  margin: 5px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.note-modal .ok, .password-modal .ok { background: #4CAF50; color: white; }
+.note-modal .cancel, .password-modal .cancel { background: #f44336; color: white; }
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+}
+
+/* Enhanced popup styles for feature editing */
+.feature-popup {
+  min-width: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.feature-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.feature-coords {
+  font-family: monospace;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 8px;
+  padding: 4px 6px;
+  background: #f5f5f5;
+  border-radius: 3px;
+}
+
+.feature-properties {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #007cba;
+}
+
+.feature-properties div {
+  margin: 3px 0;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.feature-note {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f8f9fa;
+  border-left: 3px solid #007cba;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.feature-note.empty {
+  color: #999;
+  font-style: italic;
+  background: #f5f5f5;
+  border-left-color: #ccc;
+}
+
+.popup-buttons {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.popup-buttons button {
+  padding: 6px 10px;
+  font-size: 11px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+  min-width: 80px;
+}
+
+.btn-edit {
+  background: #007cba;
+  color: white;
+  border-color: #005a8b;
+}
+
+.btn-edit:hover {
+  background: #005a8b;
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+  border-color: #c82333;
+}
+
+.btn-delete:hover {
+  background: #c82333;
+}
+
+/* Edit note modal styles */
+.edit-note-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: 10000;
+  max-width: 400px;
+  width: 90%;
+}
+
+.edit-note-modal h3 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 16px;
+}
+
+.edit-note-modal textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+
+.edit-note-modal div {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.edit-note-modal button {
+  padding: 8px 16px;
+  font-size: 13px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-note-modal .ok {
+  background: #007cba;
+  color: white;
+}
+
+.edit-note-modal .ok:hover {
+  background: #005a8b;
+}
+
+.edit-note-modal .cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.edit-note-modal .cancel:hover {
+  background: #545b62;
+}
+
+/* Mobile responsive adjustments for popups and modals */
+@media (max-width: 768px) {
+  .popup-buttons {
+    flex-direction: column;
+  }
+  
+  .popup-buttons button {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
+    margin: 2px 0;
+  }
+  
+  .edit-note-modal {
+    max-width: 95%;
+    padding: 15px;
+  }
+  
+  .edit-note-modal textarea {
+    min-height: 80px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .feature-popup {
+    font-size: 13px;
+  }
+  
+  /* Hide export buttons on mobile - they don't make sense on mobile devices */
+  .export-btn {
+    display: none;
+  }
+}
+
