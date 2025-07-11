@@ -140,6 +140,51 @@ button:active, .button-link:active {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
+/* Location marker styling */
+.location-marker {
+  background: none;
+  border: none;
+  font-size: 18px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Geolocation button - mobile only */
+.geo-location-btn {
+  position: absolute;
+  top: 50px; /* Below search box */
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #dee2e6;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.geo-location-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
+}
+
+.geo-location-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.geo-location-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Popup styling for search results */
 .popup-title {
   font-weight: 600;

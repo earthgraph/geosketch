@@ -95,6 +95,7 @@ The above results in [this geosketch link](https://geosketch.io/#data=bm90ZQl3a3
 
 | Version | Release Date | Key Features |
 |---------|-------------|--------------|
+| v1.2.2  | 2025-07-09  | longitude, latitude centering, center on location |
 | v1.2.1  | 2025-07-06  | Initial public release: WKT support, Drawing tools, Encryption, Toponym search, Mobile optimizations |
 
 ## Key Features

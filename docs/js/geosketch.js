@@ -20,7 +20,7 @@ class GeoSketch {
     
     this.init();
   }
-
+  
   init() {
     // Initialize map
     this.map = L.map('map').setView([0, 0], 2);
@@ -48,10 +48,13 @@ class GeoSketch {
     // Initialize search functionality
     this.initSearch();
     
+    // Initialize geolocation functionality (v1.2.2)
+    this.initGeolocation();
+    
     // Load shared data if present in URL
     this.loadSharedData();
   }
-
+  
   initDrawControls() {
     this.drawControl = new L.Control.Draw({
       draw: {
@@ -68,14 +71,14 @@ class GeoSketch {
     });
     this.map.addControl(this.drawControl);
   }
-
+  
   bindEvents() {
     // Drawing events
     this.map.on(L.Draw.Event.CREATED, (e) => {
       this.currentDrawnLayer = e.layer;
       this.showNoteModal();
     });
-
+    
     // Edit events
     this.map.on(L.Draw.Event.EDITED, (e) => {
       var layers = e.layers;
@@ -96,7 +99,7 @@ class GeoSketch {
       });
       this.updateURL();
     });
-
+    
     // Delete events
     this.map.on(L.Draw.Event.DELETED, (e) => {
       var layers = e.layers;
@@ -110,7 +113,7 @@ class GeoSketch {
       });
       this.updateURL();
     });
-
+    
     // Keyboard events for note modal
     document.getElementById('noteInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -134,13 +137,13 @@ class GeoSketch {
       }
     });
   }
-
+  
   showNoteModal() {
     document.getElementById('modalOverlay').style.display = 'block';
     document.getElementById('noteModal').style.display = 'block';
     document.getElementById('noteInput').focus();
   }
-
+  
   saveNote() {
     const note = document.getElementById('noteInput').value || 'No note';
     
@@ -171,23 +174,23 @@ class GeoSketch {
     document.getElementById('noteInput').value = '';
     this.updateURL();
   }
-
+  
   cancelNote() {
     this.currentDrawnLayer = null;
     this.hideNoteModal();
     document.getElementById('noteInput').value = '';
   }
-
+  
   hideNoteModal() {
     document.getElementById('modalOverlay').style.display = 'none';
     document.getElementById('noteModal').style.display = 'none';
   }
-
+  
   // Enhanced note editing functionality
   generateFeatureId() {
     return 'feature_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
-
+  
   getLayerType(layer) {
     if (layer instanceof L.Marker) return 'Point';
     if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) return 'Line';
@@ -196,16 +199,16 @@ class GeoSketch {
     if (layer instanceof L.Rectangle) return 'Rectangle';
     return 'Feature';
   }
-
+  
   getLayerCoordinates(layer) {
     if (layer instanceof L.Marker) {
       const latlng = layer.getLatLng();
-      return `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+      return `${latlng.lng.toFixed(6)}, ${latlng.lat.toFixed(6)}`;
     }
     if (layer instanceof L.Circle) {
       const center = layer.getLatLng();
       const radius = layer.getRadius();
-      return `Center: ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}, Radius: ${radius.toFixed(0)}m`;
+      return `Center: ${center.lng.toFixed(6)}, ${center.lat.toFixed(6)}, Radius: ${radius.toFixed(0)}m`;
     }
     if (layer instanceof L.Polyline) {
       const bounds = layer.getBounds();
@@ -213,7 +216,7 @@ class GeoSketch {
     }
     return 'Multiple coordinates';
   }
-
+  
   createFeaturePopup(layer, feature) {
     const coords = this.getLayerCoordinates(layer);
     const note = feature.properties?.note || '';
@@ -224,9 +227,9 @@ class GeoSketch {
     let additionalProps = '';
     if (feature.properties) {
       const otherProps = Object.entries(feature.properties)
-        .filter(([k, v]) => k !== 'id' && k !== 'note' && v)
-        .map(([k, v]) => `<div><strong>${k}:</strong> ${v}</div>`)
-        .join('');
+      .filter(([k, v]) => k !== 'id' && k !== 'note' && v)
+      .map(([k, v]) => `<div><strong>${k}:</strong> ${v}</div>`)
+      .join('');
       if (otherProps) {
         additionalProps = `<div class="feature-properties">${otherProps}</div>`;
       }
@@ -257,11 +260,11 @@ class GeoSketch {
     
     return popupContent;
   }
-
+  
   findFeatureByIdInLayers(featureId) {
     return this.allLayers.find(item => item.feature?.properties?.id === featureId);
   }
-
+  
   editFeatureNote(featureId) {
     const featureItem = this.findFeatureByIdInLayers(featureId);
     if (!featureItem) {
@@ -275,7 +278,7 @@ class GeoSketch {
     // Show edit modal
     this.showEditNoteModal(currentNote);
   }
-
+  
   showEditNoteModal(currentNote) {
     const editModal = document.getElementById('editNoteModal');
     const editTextarea = document.getElementById('editNoteTextarea');
@@ -292,7 +295,7 @@ class GeoSketch {
     // Focus on textarea
     setTimeout(() => editTextarea.focus(), 100);
   }
-
+  
   saveEditedNote() {
     if (!this.currentEditingFeature) return;
     
@@ -315,11 +318,11 @@ class GeoSketch {
     // Show confirmation
     this.showNotification('Note updated!');
   }
-
+  
   cancelEditNote() {
     this.hideEditNoteModal();
   }
-
+  
   hideEditNoteModal() {
     const editModal = document.getElementById('editNoteModal');
     const editTextarea = document.getElementById('editNoteTextarea');
@@ -330,7 +333,7 @@ class GeoSketch {
     document.getElementById('modalOverlay').style.display = 'none';
     this.currentEditingFeature = null;
   }
-
+  
   deleteFeature(featureId) {
     const featureItem = this.findFeatureByIdInLayers(featureId);
     if (!featureItem) return;
@@ -354,19 +357,19 @@ class GeoSketch {
     
     this.showNotification('Feature deleted');
   }
-
+  
   showNotification(message) {
     // Simple notification using Leaflet popup
     const notification = L.popup()
-      .setLatLng(this.map.getCenter())
-      .setContent(`<div style="text-align: center; color: #27ae60; font-weight: bold;">✓ ${message}</div>`)
-      .openOn(this.map);
-      
+    .setLatLng(this.map.getCenter())
+    .setContent(`<div style="text-align: center; color: #27ae60; font-weight: bold;">✓ ${message}</div>`)
+    .openOn(this.map);
+    
     setTimeout(() => {
       this.map.closePopup(notification);
     }, 2000);
   }
-
+  
   // Password modal functions
   showPasswordModal(type) {
     this.passwordModalType = type; // 'share' or 'load'
@@ -377,33 +380,33 @@ class GeoSketch {
     const title = type === 'share' ? 'Enter Password to Encrypt' : 'Enter Password to Decrypt';
     document.getElementById('passwordModalTitle').textContent = title;
   }
-
+  
   handlePasswordSubmit() {
     const password = document.getElementById('passwordInput').value;
     if (!password) {
       alert('Please enter a password');
       return;
     }
-
+    
     if (this.passwordModalType === 'share') {
       this.shareEncryptedURL(password);
     } else if (this.passwordModalType === 'load') {
       this.decryptAndLoadData(password);
     }
   }
-
+  
   cancelPassword() {
     this.hidePasswordModal();
     document.getElementById('passwordInput').value = '';
     this.passwordModalType = null;
     this.pendingEncryptedData = null;
   }
-
+  
   hidePasswordModal() {
     document.getElementById('modalOverlay').style.display = 'none';
     document.getElementById('passwordModal').style.display = 'none';
   }
-
+  
   // Encryption helper functions
   async deriveKey(password, salt) {
     const encoder = new TextEncoder();
@@ -433,7 +436,7 @@ class GeoSketch {
       ['encrypt', 'decrypt']
     );
   }
-
+  
   async encryptData(data, password) {
     const encoder = new TextEncoder();
     
@@ -465,7 +468,7 @@ class GeoSketch {
     
     return combined;
   }
-
+  
   async decryptData(encryptedData, password) {
     // Extract salt, iv, and encrypted data
     const salt = encryptedData.slice(0, 16);
@@ -493,7 +496,7 @@ class GeoSketch {
       throw new Error('Invalid password or corrupted data');
     }
   }
-
+  
   // Array buffer to base64 conversion
   arrayBufferToBase64(buffer) {
     let binary = '';
@@ -503,7 +506,7 @@ class GeoSketch {
     }
     return btoa(binary);
   }
-
+  
   // Base64 to array buffer conversion
   base64ToArrayBuffer(base64) {
     const binary = atob(base64);
@@ -513,7 +516,7 @@ class GeoSketch {
     }
     return bytes;
   }
-
+  
   async shareEncryptedURL(password) {
     try {
       this.updateURL();
@@ -549,7 +552,7 @@ class GeoSketch {
       alert('Encryption failed. Please try again.');
     }
   }
-
+  
   showUrlFallback(url, title) {
     // Create a temporary modal with the URL for manual copying
     const modal = document.createElement('div');
@@ -574,7 +577,7 @@ class GeoSketch {
     // Select the URL text for easy copying
     modal.querySelector('textarea').select();
   }
-
+  
   async decryptAndLoadData(password) {
     try {
       const encryptedData = this.base64ToArrayBuffer(this.pendingEncryptedData);
@@ -593,7 +596,7 @@ class GeoSketch {
       document.getElementById('passwordInput').focus();
     }
   }
-
+  
   parseInput() {
     const text = document.getElementById('wktinput').value.trim();
     const lines = text.split('\n');
@@ -649,7 +652,7 @@ class GeoSketch {
     
     this.filterGeometry();
   }
-
+  
   filterGeometry() {
     const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
     
@@ -687,7 +690,7 @@ class GeoSketch {
     
     this.updateTextareaDisplay(selectedFilter);
   }
-
+  
   updateTextareaDisplay(filter = 'all') {
     if (this.features.length === 0) return;
     
@@ -719,12 +722,12 @@ class GeoSketch {
     
     document.getElementById('wktinput').value = lines.join('\n');
   }
-
+  
   updateURL() {
     const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
     this.updateTextareaDisplay(selectedFilter);
   }
-
+  
   copyWKT() {
     const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
     let exportFeatures = this.features;
@@ -758,7 +761,7 @@ class GeoSketch {
     navigator.clipboard.writeText(wktData);
     alert(`${selectedFilter} WKT copied to clipboard!`);
   }
-
+  
   exportGeoJSON() {
     const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
     let exportFeatures = this.features;
@@ -778,7 +781,7 @@ class GeoSketch {
     };
     this.downloadFile(JSON.stringify(data, null, 2), `sketch-${this.config.name.toLowerCase()}.geojson`, "application/json");
   }
-
+  
   exportCSV() {
     const selectedFilter = document.querySelector('input[name="geomFilter"]:checked').value;
     let exportFeatures = this.features;
@@ -805,17 +808,17 @@ class GeoSketch {
     });
     this.downloadFile(lines.join('\n'), `sketch-${this.config.name.toLowerCase()}.csv`, "text/tab-separated-values");
   }
-
+  
   toWKT(geom) {
     switch (geom.type) {
       case 'Point': return `POINT(${geom.coordinates.join(' ')})`;
       case 'LineString': return `LINESTRING(${geom.coordinates.map(c => c.join(' ')).join(', ')})`;
       case 'Polygon':
-        return `POLYGON((${geom.coordinates[0].map(c => c.join(' ')).join(', ')}))`;
+      return `POLYGON((${geom.coordinates[0].map(c => c.join(' ')).join(', ')}))`;
       default: return 'GEOMETRY';
     }
   }
-
+  
   downloadFile(content, filename, type) {
     const blob = new Blob([content], { type });
     const a = document.createElement('a');
@@ -823,7 +826,7 @@ class GeoSketch {
     a.download = filename;
     a.click();
   }
-
+  
   shareURL() {
     this.updateURL();
     const input = document.getElementById('wktinput').value;
@@ -841,11 +844,11 @@ class GeoSketch {
       this.showUrlFallback(url, "Shareable URL");
     }
   }
-
+  
   shareEncrypted() {
     this.showPasswordModal('share');
   }
-
+  
   loadSharedData() {
     window.addEventListener("load", () => {
       const hash = location.hash;
@@ -868,7 +871,7 @@ class GeoSketch {
       }
     });
   }
-
+  
   switchBasemap() {
     const selectedBasemap = document.querySelector('input[name="basemapChoice"]:checked').value;
     
@@ -882,12 +885,12 @@ class GeoSketch {
       this.currentBasemap = this.basemaps[selectedBasemap].addTo(this.map);
     }
   }
-
+  
   // Simple custom tile layer for testing different coordinate formats
   createPlanetaryWMTS(url, options) {
     return L.tileLayer(url, options);
   }
-
+  
   // Search functionality
   initSearch() {
     // Check if search elements exist
@@ -1042,12 +1045,19 @@ class GeoSketch {
     return 'feature';
   }
   
+  // ENHANCED for v1.2.2: Added coordinate search functionality
   performSearch(query) {
     const searchResults = document.getElementById('searchResults');
-    const queryLower = query.toLowerCase();
-    
     if (!searchResults) return;
     
+    // NEW: Check if input looks like coordinates (lon, lat)
+    const coordMatch = this.parseCoordinates(query.trim());
+    if (coordMatch) {
+      this.handleCoordinateSearch(coordMatch);
+      return;
+    }
+    
+    // Existing toponym search logic
     searchResults.innerHTML = '<div class="loading">Searching...</div>';
     this.showSearchResults();
     
@@ -1058,117 +1068,117 @@ class GeoSketch {
       this.performLocalSearch(query);
     }
   }
-  
-  async performEarthSearch(query) {
-    try {
-      // Use Nominatim (OpenStreetMap) - free, no API key required
-      const results = await this.searchNominatim(query);
-      
-      if (results && results.length > 0) {
-        // Successfully found results from Nominatim
-        this.displaySearchResults(results);
-        return;
-      }
-    } catch (error) {
-      // Nominatim unavailable, falling back to local data
-    }
+
+async performEarthSearch(query) {
+  try {
+    // Use Nominatim (OpenStreetMap) - free, no API key required
+    const results = await this.searchNominatim(query);
     
-    // Fallback to local data
-    this.performLocalSearch(query);
-  }
-  
-  async searchNominatim(query) {
-    // Use Nominatim (OpenStreetMap) - free, open-source, no API key required
-    // Documentation: https://nominatim.org/release-docs/latest/api/Search/
-    const url = `https://nominatim.openstreetmap.org/search?` + 
-                `q=${encodeURIComponent(query)}&` +
-                `format=json&` +
-                `limit=8&` +
-                `addressdetails=1&` +
-                `extratags=1`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'GeoSketch/1.2.0 (https://geosketch.io)' // Required by Nominatim
-      }
-    });
-    
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const data = await response.json();
-    
-    // Convert Nominatim results to our format
-    return data.map(result => {
-      // Estimate diameter based on place type and class
-      let diameter = 50; // default
-      const type = result.type;
-      const cls = result.class;
-      
-      if (cls === 'boundary' && type === 'administrative') {
-        const adminLevel = result.extratags?.admin_level;
-        if (adminLevel <= 2) diameter = 1000;      // countries
-        else if (adminLevel <= 4) diameter = 500;  // states/regions
-        else if (adminLevel <= 6) diameter = 200;  // counties
-        else diameter = 100;                       // cities
-      } else if (cls === 'place') {
-        if (type === 'country') diameter = 1000;
-        else if (['state', 'region'].includes(type)) diameter = 500;
-        else if (['city', 'town'].includes(type)) diameter = 100;
-        else if (['village', 'hamlet'].includes(type)) diameter = 20;
-        else if (type === 'neighbourhood') diameter = 10;
-      } else if (cls === 'amenity' || cls === 'tourism') {
-        diameter = 5; // venues, landmarks
-      } else if (cls === 'natural') {
-        diameter = 100; // natural features
-      }
-      
-      // Build location description
-      const address = result.address || {};
-      const country = address.country || '';
-      const state = address.state || address.region || '';
-      const location = [state, country].filter(x => x).join(', ') || result.display_name;
-      
-      return {
-        name: result.display_name.split(',')[0], // First part is usually the main name
-        lat: parseFloat(result.lat),
-        lon: parseFloat(result.lon),
-        country: location,
-        type: `${cls}:${type}`,
-        diameter: diameter,
-        confidence: parseFloat(result.importance || 0.5),
-        full_name: result.display_name
-      };
-    });
-  }
-  
-  performLocalSearch(query) {
-    const queryLower = query.toLowerCase();
-    
-    // Search through local nomenclature data (Mars/Moon or Earth fallback)
-    const results = this.nomenclatureData.filter(feature => {
-      return feature.name.toLowerCase().includes(queryLower) ||
-             (feature.origin && feature.origin.toLowerCase().includes(queryLower)) ||
-             (feature.country && feature.country.toLowerCase().includes(queryLower));
-    }).slice(0, 8); // Limit to 8 results
-    
-    // Successfully found results from local data
-    this.displaySearchResults(results);
-  }
-  
-  displaySearchResults(results) {
-    const searchResults = document.getElementById('searchResults');
-    
-    if (results.length === 0) {
-      searchResults.innerHTML = '<div class="no-results">No features found</div>';
+    if (results && results.length > 0) {
+      // Successfully found results from Nominatim
+      this.displaySearchResults(results);
       return;
     }
+  } catch (error) {
+    // Nominatim unavailable, falling back to local data
+  }
+  
+  // Fallback to local data
+  this.performLocalSearch(query);
+}
+
+async searchNominatim(query) {
+  // Use Nominatim (OpenStreetMap) - free, open-source, no API key required
+  // Documentation: https://nominatim.org/release-docs/latest/api/Search/
+  const url = `https://nominatim.openstreetmap.org/search?` + 
+  `q=${encodeURIComponent(query)}&` +
+  `format=json&` +
+  `limit=8&` +
+  `addressdetails=1&` +
+  `extratags=1`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'GeoSketch/1.2.2 (https://geosketch.io)' // Required by Nominatim
+    }
+  });
+  
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  
+  const data = await response.json();
+  
+  // Convert Nominatim results to our format
+  return data.map(result => {
+    // Estimate diameter based on place type and class
+    let diameter = 50; // default
+    const type = result.type;
+    const cls = result.class;
     
-    searchResults.innerHTML = results.map(feature => {
-      const subtitle = feature.country ? feature.country : 
-                      (feature.diameter ? `Diameter: ${feature.diameter}km` : feature.target);
-      const coords = `${feature.lat.toFixed(2)}°, ${feature.lon.toFixed(2)}°`;
-      
-      return `
+    if (cls === 'boundary' && type === 'administrative') {
+      const adminLevel = result.extratags?.admin_level;
+      if (adminLevel <= 2) diameter = 1000;      // countries
+      else if (adminLevel <= 4) diameter = 500;  // states/regions
+      else if (adminLevel <= 6) diameter = 200;  // counties
+      else diameter = 100;                       // cities
+    } else if (cls === 'place') {
+      if (type === 'country') diameter = 1000;
+      else if (['state', 'region'].includes(type)) diameter = 500;
+      else if (['city', 'town'].includes(type)) diameter = 100;
+      else if (['village', 'hamlet'].includes(type)) diameter = 20;
+      else if (type === 'neighbourhood') diameter = 10;
+    } else if (cls === 'amenity' || cls === 'tourism') {
+      diameter = 5; // venues, landmarks
+    } else if (cls === 'natural') {
+      diameter = 100; // natural features
+    }
+    
+    // Build location description
+    const address = result.address || {};
+    const country = address.country || '';
+    const state = address.state || address.region || '';
+    const location = [state, country].filter(x => x).join(', ') || result.display_name;
+    
+    return {
+      name: result.display_name.split(',')[0], // First part is usually the main name
+      lat: parseFloat(result.lat),
+      lon: parseFloat(result.lon),
+      country: location,
+      type: `${cls}:${type}`,
+      diameter: diameter,
+      confidence: parseFloat(result.importance || 0.5),
+      full_name: result.display_name
+    };
+  });
+}
+
+performLocalSearch(query) {
+  const queryLower = query.toLowerCase();
+  
+  // Search through local nomenclature data (Mars/Moon or Earth fallback)
+  const results = this.nomenclatureData.filter(feature => {
+    return feature.name.toLowerCase().includes(queryLower) ||
+    (feature.origin && feature.origin.toLowerCase().includes(queryLower)) ||
+    (feature.country && feature.country.toLowerCase().includes(queryLower));
+  }).slice(0, 8); // Limit to 8 results
+  
+  // Successfully found results from local data
+  this.displaySearchResults(results);
+}
+
+displaySearchResults(results) {
+  const searchResults = document.getElementById('searchResults');
+  
+  if (results.length === 0) {
+    searchResults.innerHTML = '<div class="no-results">No features found</div>';
+    return;
+  }
+  
+  searchResults.innerHTML = results.map(feature => {
+    const subtitle = feature.country ? feature.country : 
+    (feature.diameter ? `Diameter: ${feature.diameter}km` : feature.target);
+    const coords = `${feature.lon.toFixed(2)}°, ${feature.lat.toFixed(2)}°`;
+    
+    return `
         <div class="result-item" onclick="geoSketch.zoomToFeature(${feature.lat}, ${feature.lon}, ${feature.diameter || 50}, '${feature.name.replace(/'/g, "\\'")}', '${subtitle.replace(/'/g, "\\'")}', '${(feature.origin || '').replace(/'/g, "\\'")}')">
           <div class="result-name">${feature.name}</div>
           <div class="result-details">
@@ -1177,88 +1187,267 @@ class GeoSketch {
           </div>
         </div>
       `;
-    }).join('');
+  }).join('');
+}
+
+showSearchResults() {
+  const searchResults = document.getElementById('searchResults');
+  if (searchResults) {
+    searchResults.classList.add('show');
   }
-  
-  showSearchResults() {
-    const searchResults = document.getElementById('searchResults');
-    if (searchResults) {
-      searchResults.classList.add('show');
-    }
+}
+
+hideSearchResults() {
+  const searchResults = document.getElementById('searchResults');
+  if (searchResults) {
+    searchResults.classList.remove('show');
+    // Clear any highlighted items
+    searchResults.querySelectorAll('.result-item.highlighted').forEach(item => {
+      item.classList.remove('highlighted');
+    });
   }
+}
+
+zoomToFeature(lat, lon, diameter, name, subtitle, origin) {
+  // Hide search results
+  this.hideSearchResults();
   
-  hideSearchResults() {
-    const searchResults = document.getElementById('searchResults');
-    if (searchResults) {
-      searchResults.classList.remove('show');
-      // Clear any highlighted items
-      searchResults.querySelectorAll('.result-item.highlighted').forEach(item => {
-        item.classList.remove('highlighted');
-      });
-    }
-  }
+  // Clear any existing search markers
+  this.clearSearchMarkers();
   
-  zoomToFeature(lat, lon, diameter, name, subtitle, origin) {
-    // Hide search results
-    this.hideSearchResults();
-    const searchBox = document.getElementById('toponymSearch');
-    if (searchBox) searchBox.blur();
-    
-    // Clear any existing search markers
-    this.clearSearchMarkers();
-    
-    // Calculate appropriate zoom level based on feature size - more conservative for large features
-    let zoomLevel;
-    if (diameter > 2000) zoomLevel = 2;       // Very large features (continents, major deserts)
-    else if (diameter > 1000) zoomLevel = 3;  // Large features (big plains, large craters)
-    else if (diameter > 500) zoomLevel = 4;   // Medium-large features
-    else if (diameter > 300) zoomLevel = 5;   // Medium features
-    else if (diameter > 100) zoomLevel = 6;   // Small-medium features
-    else if (diameter > 50) zoomLevel = 7;    // Small features
-    else if (diameter > 20) zoomLevel = 8;    // Very small features
-    else if (diameter > 10) zoomLevel = 9;    // Tiny features
-    else zoomLevel = 10;                      // Point features
-    
-    // Zoom to location
-    this.map.setView([lat, lon], zoomLevel);
-    
-    // Add a marker with popup - just the marker, no circle
-    const marker = L.marker([lat, lon], {
-      icon: L.divIcon({
-        className: 'search-marker',
-        html: '📍',
-        iconSize: [20, 20],
-        iconAnchor: [10, 20]
-      })
-    }).addTo(this.map);
-    
-    // Only show diameter for planetary features (Mars/Moon), not Earth cities
-    const shouldShowDiameter = this.config.name !== 'Earth' && diameter;
-    
-    const popupContent = `
+  // Calculate appropriate zoom level based on feature size - more conservative for large features
+  let zoomLevel;
+  if (diameter > 2000) zoomLevel = 2;       // Very large features (continents, major deserts)
+  else if (diameter > 1000) zoomLevel = 3;  // Large features (big plains, large craters)
+  else if (diameter > 500) zoomLevel = 4;   // Medium-large features
+  else if (diameter > 300) zoomLevel = 5;   // Medium features
+  else if (diameter > 100) zoomLevel = 6;   // Small-medium features
+  else if (diameter > 50) zoomLevel = 7;    // Small features
+  else if (diameter > 20) zoomLevel = 8;    // Very small features
+  else if (diameter > 10) zoomLevel = 9;    // Tiny features
+  else zoomLevel = 10;                      // Point features
+  
+  // Zoom to location
+  this.map.setView([lat, lon], zoomLevel);
+  
+  // Add a marker with popup - just the marker, no circle
+  const marker = L.marker([lat, lon], {
+    icon: L.divIcon({
+      className: 'search-marker',
+      html: '📍',
+      iconSize: [20, 20],
+      iconAnchor: [10, 20]
+    })
+  }).addTo(this.map);
+  
+  // Only show diameter for planetary features (Mars/Moon), not Earth cities
+  const shouldShowDiameter = this.config.name !== 'Earth' && diameter;
+  
+  const popupContent = `
       <div class="popup-title">${name}</div>
       <div class="popup-details">
         <strong>Location:</strong> ${subtitle}<br>
-        <strong>Coordinates:</strong> ${lat.toFixed(3)}°, ${lon.toFixed(3)}°
+        <strong>Coordinates:</strong> ${lon.toFixed(3)}°, ${lat.toFixed(3)}°
         ${shouldShowDiameter ? `<br><strong>Diameter:</strong> ${diameter} km` : ''}
         ${origin ? `<br><strong>Origin:</strong> ${origin.substring(0, 100)}${origin.length > 100 ? '...' : ''}` : ''}
       </div>
     `;
-    
-    marker.bindPopup(popupContent).openPopup();
-    
-    // Store marker for cleanup
-    this.searchMarkers.push(marker);
-    
-    // No circles - just the marker/centroid as requested
+  
+  marker.bindPopup(popupContent).openPopup();
+  
+  // Store marker for cleanup
+  this.searchMarkers.push(marker);
+  
+  // No circles - just the marker/centroid as requested
+}
+
+clearSearchMarkers() {
+  this.searchMarkers.forEach(marker => {
+    this.map.removeLayer(marker);
+  });
+  this.searchMarkers = [];
+}
+
+// NEW v1.2.2: Coordinate parsing functionality
+parseCoordinates(input) {
+  // Remove extra spaces and normalize
+  const clean = input.replace(/\s+/g, ' ').trim();
+  
+  // Match various coordinate formats:
+  // 1. "lon, lat" or "lon,lat" (decimal degrees)
+  // 2. "lon lat" (space separated)
+  // 3. Handle negative coordinates
+  const patterns = [
+    /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/, // comma separated
+    /^(-?\d+\.?\d*)\s+(-?\d+\.?\d*)$/   // space separated
+  ];
+  
+  for (const pattern of patterns) {
+    const match = clean.match(pattern);
+    if (match) {
+      let lon = parseFloat(match[1]);
+      const lat = parseFloat(match[2]);
+      
+      // Handle planetary 360-degree longitude format (e.g., 320° = -40°)
+      if (lon > 180 && lon <= 360) {
+        lon = lon - 360;
+      }
+      
+      // Validation: lon -180 to 360 (converted to -180 to 180), lat -90 to 90
+      if (lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) {
+        return { lon, lat };
+      }
+    }
   }
   
-  clearSearchMarkers() {
-    this.searchMarkers.forEach(marker => {
-      this.map.removeLayer(marker);
-    });
-    this.searchMarkers = [];
+  return null;
+}
+
+handleCoordinateSearch(coords) {
+  const { lon, lat } = coords;
+  
+  // Hide search results first
+  this.hideSearchResults();
+  
+  // Clear existing search markers
+  this.clearSearchMarkers();
+  
+  // Zoom to coordinates with appropriate level
+  this.map.setView([lat, lon], 10);
+  
+  // Add marker at coordinates
+  const marker = L.marker([lat, lon], {
+    icon: L.divIcon({
+      className: 'search-marker',
+      html: '🎯',
+      iconSize: [20, 20],
+      iconAnchor: [10, 20]
+    })
+  }).addTo(this.map);
+  
+  // Show popup with coordinate info
+  const popupContent = `
+    <div class="popup-title">Coordinates</div>
+    <div class="popup-details">
+      <strong>Longitude:</strong> ${lon.toFixed(6)}°<br>
+      <strong>Latitude:</strong> ${lat.toFixed(6)}°
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent).openPopup();
+  
+  // Store marker for cleanup
+  this.searchMarkers.push(marker);
+}
+
+// NEW v1.2.2: Geolocation functionality  
+initGeolocation() {
+  // Only add geolocation on mobile devices AND only on Earth (not Mars/Moon!)
+  if (!this.isMobileDevice()) return;
+  if (this.config.name.toLowerCase() !== 'earth') return;
+  
+  const mapContainer = document.getElementById('map');
+  if (!mapContainer) return;
+  
+  // Create geolocation button
+  const geoButton = document.createElement('button');
+  geoButton.className = 'geo-location-btn';
+  geoButton.innerHTML = '📍';
+  geoButton.title = 'Center on current location';
+  geoButton.onclick = () => this.centerOnCurrentLocation();
+  
+  mapContainer.appendChild(geoButton);
+}
+
+isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         (window.innerWidth <= 768);
+}
+
+centerOnCurrentLocation() {
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by this browser.');
+    return;
   }
+  
+  // Show loading state
+  const geoButton = document.querySelector('.geo-location-btn');
+  if (geoButton) {
+    geoButton.innerHTML = '⏳';
+    geoButton.disabled = true;
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      
+      // Zoom to current location
+      this.map.setView([lat, lon], 12);
+      
+      // Clear existing search markers
+      this.clearSearchMarkers();
+      
+      // Add marker at current location
+      const marker = L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: 'location-marker',
+          html: '📍',
+          iconSize: [24, 24],
+          iconAnchor: [12, 24]
+        })
+      }).addTo(this.map);
+      
+      // Show popup with location info
+      const accuracy = position.coords.accuracy;
+      const popupContent = `
+        <div class="popup-title">Your Location</div>
+        <div class="popup-details">
+          <strong>Longitude:</strong> ${lon.toFixed(6)}°<br>
+          <strong>Latitude:</strong> ${lat.toFixed(6)}°<br>
+          <strong>Accuracy:</strong> ±${Math.round(accuracy)}m
+        </div>
+      `;
+      
+      marker.bindPopup(popupContent).openPopup();
+      
+      // Store marker for cleanup
+      this.searchMarkers.push(marker);
+      
+      // Reset button
+      if (geoButton) {
+        geoButton.innerHTML = '📍';
+        geoButton.disabled = false;
+      }
+    },
+    (error) => {
+      let message = 'Unable to retrieve your location.';
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          message = 'Location access denied by user.';
+          break;
+        case error.POSITION_UNAVAILABLE:
+          message = 'Location information is unavailable.';
+          break;
+        case error.TIMEOUT:
+          message = 'Location request timed out.';
+          break;
+      }
+      alert(message);
+      
+      // Reset button
+      if (geoButton) {
+        geoButton.innerHTML = '📍';
+        geoButton.disabled = false;
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 300000 // 5 minutes
+    }
+  );
+}
 }
 
 // Global functions that the HTML buttons call
